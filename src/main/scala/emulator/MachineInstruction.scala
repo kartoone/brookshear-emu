@@ -52,7 +52,7 @@ case class LoadImmediate(toGpr: Int, immediateValue: MachineWord) extends Machin
 case class Store(fromGpr: Int, toAddress: MachineWord) extends MachineInstruction {
   override def execute(st: MachineState) = 
 	if (toAddress.unsignedValue >= 0x88 && ((toAddress.unsignedValue&8) >= 8)) 
-		st.withUpdatedDisplay(toAddress&0x77, st.gprs(fromGpr)).withUpdatedMemory(toAddress, st.gprs(fromGpr))
+		st.withUpdatedDisplay((toAddress&0x77)-((toAddress&0x70)>>4)*8, st.gprs(fromGpr)).withUpdatedMemory(toAddress, st.gprs(fromGpr))
 	else	
 		st.withUpdatedMemory(toAddress, st.gprs(fromGpr)) 
   override def toString = s"STORE r$fromGpr -> *(0x${toAddress.toHexString})"
