@@ -7,7 +7,11 @@ import scala.scalajs.js
 import scala.util._
 
 
-class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: String = null) {
+// UPDATE by Brian Toone (github username: kartoone)
+// to take advantage of all the code here, we can reuse this for a highly pixelated tiny display
+// by setting a flag variable (isDisplay) to true to indicate we want to display a grayscale square
+// instead of the actual hex value
+class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: String = null, isDisplay: Boolean = false) {
   
   def setData(d: Seq[MachineWord]) { _data = d; update() }
 
@@ -34,7 +38,8 @@ class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: 
       
       (0 until cols) foreach { i =>
         val th = g.document.createElement("th")
-        th.textContent = f"$i%X"
+		th.textContent = f"$i%X"
+		th.style.textAlign = "center"
         tr.appendChild(th)
       }
     }
@@ -64,6 +69,7 @@ class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: 
   }
   
   private def update() {
+	import org.scalajs.dom
     
     var elementToFocus: Option[js.Dynamic] = None
     
@@ -76,6 +82,10 @@ class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: 
     for ((row, rowIndex) <- _data.zipWithIndex.grouped(cols).zipWithIndex) {
    
       val tr = g.document.createElement("tr")
+	  tr.style.padding = "0"
+	  tr.style.margin = "0"
+      tr.style.borderSpacing = "0"
+      tableElement.appendChild(tr)
       
       val th = g.document.createElement("th")
       th.textContent = f"$rowIndex%X"
@@ -84,8 +94,31 @@ class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: 
       for ((cell, cellIndex) <- row) {
         
         val td = g.document.createElement("td")
-        td.textContent = f"${cell.toInt}%02X"
-        td.contentEditable = true
+        tr.appendChild(td)
+		if (isDisplay) {
+			val canvas = g.document.createElement("canvas")
+			td.appendChild(canvas)
+			td.style.width = "34px"
+			td.style.height = "30px"
+			td.style.padding = "0 4px 0 0"
+			td.style.margin= "0"
+			canvas.width = "30"
+			canvas.height = "30"
+   			type Ctx2D = dom.CanvasRenderingContext2D
+			val ctx = canvas.getContext("2d").asInstanceOf[Ctx2D]
+			val amt = cell.toInt
+			ctx.fillStyle = "rgb(" + amt + "," + amt + "," + amt + ")"
+			ctx.fillRect(0,0,30,30)
+     	} else {
+        	td.textContent = f"${cell.toInt}%02X"
+        	td.contentEditable = true
+	  		if (rowIndex >= 8 && ((cellIndex&0x08) >= 8)) {
+				td.style.backgroundColor = "#eee"
+			}
+	  		if (cellIndex == 240) {
+				td.style.backgroundColor = "#bbb"
+			}
+		}
         
         td.onblur = (e: js.Dynamic) => onInput(td.textContent.toString, cellIndex)
         td.onkeypress = (e: js.Dynamic) => if (e.keyCode.toString == "13") {
@@ -98,9 +131,7 @@ class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: 
         
         lastIndex filter (_ == cellIndex-1) foreach { _ => elementToFocus = Some(td); lastIndex = None }
         
-        tr.appendChild(td)
-      } 
-      tableElement.appendChild(tr)
+   } 
     }
     elementToFocus foreach (focusAndSelectText(_)) 
   }

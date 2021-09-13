@@ -12,3 +12,4 @@ scalaJSUseMainModuleInitializer := true
 // Specify additional .js file to be passed to package-js and optimize-js
 //unmanagedSources in (Compile, ScalaJSKeys.packageJS) +=
 //    baseDirectory.value / "js" / "startup.js"
+libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.1.0"

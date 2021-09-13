@@ -15,6 +15,7 @@ object Main extends js.JSApp {
   var wait_time = 500
   val memoryTable = new MachineWordTable(16, true)
   val registerTable = new MachineWordTable(1, true, "GPRs")
+  val displayTable = new MachineWordTable(8, true, null, true)
   
   def run() {
     running = true
@@ -71,12 +72,19 @@ object Main extends js.JSApp {
       lSeq = l.toSeq
     } { 
       ms = MachineState(lSeq ++ Vector.fill(256 - lSeq.length)(MachineWord(0))) 
+	  // populate the display memory by updating the display relevant addresses
+	  for (addr <- lSeq.indices) {
+		if (addr >= 0x88 && ((addr&0x08)>=8)) {
+        	ms = ms.withUpdatedDisplay((addr&0x77)-((addr&0x70)>>4)*8, lSeq(addr)) // shift to the top left
+		}
+	  }
     }
   }
   
   def updateUI() {
     memoryTable.setData(ms.memory)
     registerTable.setData(ms.gprs)
+    displayTable.setData(ms.display)
     g.document.getElementById("pc_value").textContent = ms.pc.toHexString
     g.document.getElementById("ir_value").textContent = ms.ir._1.toHexString + ms.ir._2.toHexString
     g.document.getElementById("dec_value").textContent = ms.decodedInstruction.toString
@@ -92,6 +100,12 @@ object Main extends js.JSApp {
     
     memoryTable.onChangeHandler = (address: MachineWord, value: MachineWord) => {
       ms = ms.withUpdatedMemory(address, value)
+	  if (address.unsignedValue >= 0x88 && ((address.unsignedValue&8) >= 8)) {
+		ms = ms.withUpdatedDisplay((address&0x77)-((address&0x70)>>4)*8, value) // shift to the top left
+	  }
+	  if (address.unsignedValue == 240) {
+    	g.document.getElementById("keystroke").value = f"${value.unsignedValue}%1c"
+	  }
       updateUI()
     }
     
@@ -100,6 +114,16 @@ object Main extends js.JSApp {
     val binary_value = g.document.getElementById("binary_value")
     val signed_value = g.document.getElementById("signed_value")
     val float_value = g.document.getElementById("float_value")
+    val keystroke = g.document.getElementById("keystroke")
+
+	import org.scalajs.dom
+	keystroke.onchange = (e: dom.Event) => {
+		if (keystroke.value.asInstanceOf[String] != "") {
+			val bytes = keystroke.value.asInstanceOf[String].getBytes()
+			ms = ms.withUpdatedMemory(240, MachineWord(bytes(0).asInstanceOf[Int]))
+			updateUI()
+		}
+	}
     
     memoryTable.onHoverHandler = {
       case Some(address) =>
@@ -116,6 +140,7 @@ object Main extends js.JSApp {
        
     g.document.getElementById("memory").appendChild(memoryTable.element)
     g.document.getElementById("gprs_container").appendChild(registerTable.element)
+    g.document.getElementById("display").appendChild(displayTable.element)
     
     g.document.getElementById("clear").onclick = () => {
       if (!running) {

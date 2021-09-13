@@ -32,20 +32,21 @@ case object Halted extends MachineCycleState {
   override def next = Halted
 }
 
-case class MachineState private (memory: Seq[MachineWord], gprs: Seq[MachineWord], pc: MachineWord, 
+case class MachineState private (display: Seq[MachineWord], memory: Seq[MachineWord], gprs: Seq[MachineWord], pc: MachineWord, 
   ir: (MachineWord, MachineWord), decodedInstruction: MachineInstruction, cycleState: MachineCycleState) {
     
+  require(display.length == 8*8);
   require(memory.length == 256);
   require(gprs.length == 16)
   
-  
+  def withUpdatedDisplay(address: MachineWord, value: MachineWord) = copy(display = display.updated(address, value))
   def withUpdatedMemory(address: MachineWord, value: MachineWord) = copy(memory = memory.updated(address, value))
   def withUpdatedPC(pc: MachineWord) = copy(pc = pc)
   def withUpdatedIR(ir: (MachineWord, MachineWord)) = copy(ir = ir)
   def withUpdatedGPR(grpNum: Int, value: MachineWord) = copy(gprs = gprs.updated(grpNum, value))
   def withUpdatedDecodedInstruction(i: MachineInstruction) = copy(decodedInstruction = i)
   def withUpdatedCycleState(s: MachineCycleState) = copy(cycleState = s)
-  def withClearedCPU = new MachineState(memory, Vector.fill(16)(0), 0, (0,0), Undefined, Initial)
+  def withClearedCPU = new MachineState(Vector.fill(8*8)(0), memory, Vector.fill(16)(0), 0, (0,0), Undefined, Initial)
   
   def step = {
     val st = withUpdatedCycleState(cycleState.next)
@@ -54,6 +55,6 @@ case class MachineState private (memory: Seq[MachineWord], gprs: Seq[MachineWord
 }
 
 object MachineState {
-  def apply() = new MachineState(Vector.fill(256)(0), Vector.fill(16)(0), 0, (0,0), Undefined, Initial)
-  def apply(mem: Seq[MachineWord]) = new MachineState(mem, Vector.fill(16)(0), 0, (0,0), Undefined, Initial)
+  def apply() = new MachineState(Vector.fill(8*8)(0), Vector.fill(256)(0), Vector.fill(16)(0), 0, (0,0), Undefined, Initial)
+  def apply(mem: Seq[MachineWord]) = new MachineState(Vector.fill(8*8)(0), mem, Vector.fill(16)(0), 0, (0,0), Undefined, Initial)
 }
