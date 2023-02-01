@@ -112,7 +112,7 @@ class MachineWordTable(cols: Int, showFirstHeaderRow: Boolean, customHeaderRow: 
      	} else {
         	td.textContent = f"${cell.toInt}%02X"
         	td.contentEditable = true
-	  		if (rowIndex >= 8 && ((cellIndex&0x08) >= 8)) {
+	  		if (rowIndex >= 8 && ((cellIndex&0x08) >= 8) && customHeaderRow==null) {
 				td.style.backgroundColor = "#eee"
 			}
 	  		if (cellIndex == 240) {

@@ -47,6 +47,7 @@ case class MachineState private (display: Seq[MachineWord], memory: Seq[MachineW
   def withUpdatedDecodedInstruction(i: MachineInstruction) = copy(decodedInstruction = i)
   def withUpdatedCycleState(s: MachineCycleState) = copy(cycleState = s)
   def withClearedCPU = new MachineState(Vector.fill(8*8)(0), memory, Vector.fill(16)(0), 0, (0,0), Undefined, Initial)
+  def withClearedDisplay = copy(display = Vector.fill(8*8)(0))
   
   def step = {
     val st = withUpdatedCycleState(cycleState.next)

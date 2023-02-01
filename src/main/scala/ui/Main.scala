@@ -6,8 +6,6 @@ import emulator._
 import scala.scalajs.js
 import scala.util._
 
-
-
 object Main extends js.JSApp {
   
   var ms = MachineState()
@@ -26,6 +24,14 @@ object Main extends js.JSApp {
       running = false
     else
       g.setTimeout(run _, wait_time)
+  }
+
+  def hasNonprintableAsciiChar(s: String): Boolean = {
+    val pattern = """[^\x20-\x7E]+""".r
+    pattern.findFirstMatchIn(s) match {
+      case Some(_) => true
+      case None => false
+    }
   }
 
   def updateLights() {
@@ -112,8 +118,11 @@ object Main extends js.JSApp {
     val addr = g.document.getElementById("addr")
     val hex_value = g.document.getElementById("hex_value")
     val binary_value = g.document.getElementById("binary_value")
+    val unsigned_value = g.document.getElementById("unsigned_value")
     val signed_value = g.document.getElementById("signed_value")
     val float_value = g.document.getElementById("float_value")
+    val char_value = g.document.getElementById("char_value")
+//    val grayscale_value = g.document.getElementById("grayscale_value")
     val keystroke = g.document.getElementById("keystroke")
 
 	import org.scalajs.dom
@@ -128,14 +137,16 @@ object Main extends js.JSApp {
     memoryTable.onHoverHandler = {
       case Some(address) =>
         val memValue = ms.memory(address.unsignedValue)
-        addr.textContent = "MEM: 0x" + address.toHexString
+	    val cv: String = if (hasNonprintableAsciiChar(f"${memValue.unsignedValue}%1c")) "N/A" else f"${memValue.unsignedValue}%1c"
+        addr.textContent = "0x" + address.toHexString
         hex_value.textContent = "0x" + memValue.toHexString
+        unsigned_value.textContent = memValue.unsignedValue
         binary_value.textContent = f"${Integer.toBinaryString(memValue)}%8s"
         float_value.textContent = memValue.floatValue
         signed_value.textContent = memValue.signedValue
-            
+		char_value.textContent = cv
       case None =>
-        Seq(addr, hex_value, binary_value, float_value, signed_value).foreach(_.textContent = "")
+        Seq(addr, hex_value, binary_value, float_value, unsigned_value, signed_value, char_value).foreach(_.textContent = "")
     }
        
     g.document.getElementById("memory").appendChild(memoryTable.element)
@@ -157,7 +168,16 @@ object Main extends js.JSApp {
       }
     }
     
-    g.document.getElementById("run").onclick = () => {
+    g.document.getElementById("clear_display").onclick = () => {
+      ms = ms.withClearedDisplay
+      for (addr <- ms.memory.indices) {
+	if (addr >= 0x88 && ((addr&0x08)>=8)) {
+	  ms = ms.withUpdatedMemory(addr, 0)
+	}
+      }
+      updateUI()
+    }
+     g.document.getElementById("run").onclick = () => {
       if (!running) {
         g.setTimeout(run _, wait_time)
       }
